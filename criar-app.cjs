@@ -1,4 +1,6 @@
-import { motion, AnimatePresence } from 'framer-motion'
+const fs = require('fs');
+
+const codigo = `import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useMemo } from 'react'
 
 interface Desabafo {
@@ -28,28 +30,6 @@ const VERSICULOS_CURAS = [
   "Tudo posso naquele que me fortalece. Filipenses 4:13"
 ]
 
-function RespostaMensagem({ msgId, onEnviar }: { msgId: number, onEnviar: (id: number, texto: string) => void }) {
-  const [texto, setTexto] = useState('')
-
-  return (
-    <div>
-      <textarea
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        placeholder="Escreva sua resposta pastoral..."
-        className="w-full h-24 p-3 bg-calm-50 rounded-lg border border-calm-200 focus:border-amber-400 focus:outline-none text-calm-800 text-sm resize-none mb-2"
-      />
-      <button
-        onClick={() => { onEnviar(msgId, texto); setTexto('') }}
-        disabled={texto.trim().length < 5}
-        className="w-full py-2 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition disabled:bg-calm-200"
-      >
-        Enviar Resposta
-      </button>
-    </div>
-  )
-}
-
 function App() {
   const [tela, setTela] = useState<'home' | 'mural' | 'escrever' | 'pastor'>('home')
   const [novoDesabafo, setNovoDesabafo] = useState('')
@@ -65,6 +45,7 @@ function App() {
   const [telaPastor, setTelaPastor] = useState<'login' | 'mensagens' | 'escrever' | 'codigo' | 'verResposta'>('login')
   const [codigoAcompanhamento, setCodigoAcompanhamento] = useState('')
   const [mensagemEncontrada, setMensagemEncontrada] = useState<MensagemPastor | null>(null)
+  const [respostaPastor, setRespostaPastor] = useState('')
   const [desabafos, setDesabafos] = useState<Desabafo[]>(() => {
     const salvo = localStorage.getItem('refugio_desabafos')
     return salvo? JSON.parse(salvo) : [
@@ -151,9 +132,10 @@ function App() {
     else { alert('Código não encontrado. Verifique e tente novamente.') }
   }
 
-  const enviarRespostaPastor = (id: number, resposta: string) => {
-    if (resposta.trim().length < 5) return
-    setMensagensPastor(mensagensPastor.map(m => m.id === id? {...m, resposta: resposta, dataResposta: new Date().toLocaleString('pt-BR'), lida: true } : m))
+  const enviarRespostaPastor = (id: number) => {
+    if (respostaPastor.trim().length < 5) return
+    setMensagensPastor(mensagensPastor.map(m => m.id === id? {...m, resposta: respostaPastor, dataResposta: new Date().toLocaleString('pt-BR'), lida: true } : m))
+    setRespostaPastor('')
   }
 
   const loginPastor = () => {
@@ -350,7 +332,10 @@ function App() {
                               <p className="text-calm-700 text-sm whitespace-pre-wrap">{msg.resposta}</p>
                             </div>
                           ) : (
-                            <RespostaMensagem msgId={msg.id} onEnviar={enviarRespostaPastor} />
+                            <div>
+                              <textarea value={respostaPastor} onChange={(e) => setRespostaPastor(e.target.value)} placeholder="Escreva sua resposta pastoral..." className="w-full h-24 p-3 bg-calm-50 rounded-lg border border-calm-200 focus:border-amber-400 focus:outline-none text-calm-800 text-sm resize-none mb-2" />
+                              <button onClick={() => enviarRespostaPastor(msg.id)} disabled={respostaPastor.trim().length < 5} className="w-full py-2 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition disabled:bg-calm-200">Enviar Resposta</button>
+                            </div>
                           )}
                         </motion.div>
                       ))}
@@ -367,3 +352,7 @@ function App() {
 }
 
 export default App
+`;
+
+fs.writeFileSync('src/App.tsx', codigo, 'utf8');
+console.log('✅ App.tsx criado com sucesso! 842 linhas.');
