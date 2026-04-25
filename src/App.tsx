@@ -8,9 +8,45 @@ interface Desabafo {
   tempo: string
 }
 
+interface MensagemPastor {
+  id: number
+  texto: string
+  data: string
+  lida: boolean
+  codigo: string
+  resposta?: string
+  dataResposta?: string
+}
+
+const VERSICULOS_CURAS = [
+  "Lança sobre ele toda a sua ansiedade, porque ele tem cuidado de você. 1 Pedro 5:7",
+  "O Senhor está perto dos que têm o coração quebrantado. Salmos 34:18",
+  "Vinde a mim todos os cansados, e eu vos aliviarei. Mateus 11:28",
+  "Não temas, porque eu sou contigo. Isaías 41:10",
+  "A minha graça te basta, porque o meu poder se aperfeiçoa na fraqueza. 2 Coríntios 12:9",
+  "Entrega o teu caminho ao Senhor; confia nele, e ele o fará. Salmos 37:5",
+  "Tudo posso naquele que me fortalece. Filipenses 4:13"
+]
+
 function App() {
-  const [tela, setTela] = useState<'home' | 'mural' | 'escrever'>('home')
+  const [tela, setTela] = useState<'home' | 'mural' | 'escrever' | 'pastor'>('home')
   const [novoDesabafo, setNovoDesabafo] = useState('')
+
+  const [mostrarNotificacao, setMostrarNotificacao] = useState(false)
+  const [versiculoAtual, setVersiculoAtual] = useState('')
+
+  // ESTADOS DA ÁREA DO PASTOR 👇
+  const [mensagensPastor, setMensagensPastor] = useState<MensagemPastor[]>(() => {
+    const salvo = localStorage.getItem('refugio_mensagens_pastor')
+    return salvo? JSON.parse(salvo) : []
+  })
+  const [textoMensagemPastor, setTextoMensagemPastor] = useState('')
+  const [senhaPastor, setSenhaPastor] = useState('')
+  const [pastorLogado, setPastorLogado] = useState(false)
+  const [telaPastor, setTelaPastor] = useState<'login' | 'mensagens' | 'escrever' | 'codigo' | 'verResposta'>('login')
+  const [codigoAcompanhamento, setCodigoAcompanhamento] = useState('')
+  const [mensagemEncontrada, setMensagemEncontrada] = useState<MensagemPastor | null>(null)
+  const [respostaPastor, setRespostaPastor] = useState('')
 
   const [desabafos, setDesabafos] = useState<Desabafo[]>(() => {
     const salvo = localStorage.getItem('refugio_desabafos')
@@ -36,7 +72,8 @@ function App() {
     ]
   })
 
-  const [oracoesEnviadas, setOracoesEnviadas] = useState(() => {
+
+  const [oracoesEnviadas, setOracoesEnviadas] = useState<number>(() => {
     const salvo = localStorage.getItem('refugio_total_oracoes')
     return salvo? JSON.parse(salvo) : 1247
   })
@@ -45,6 +82,18 @@ function App() {
     const salvo = localStorage.getItem('refugio_ja_orou')
     return salvo? JSON.parse(salvo) : []
   })
+
+  // Refúgio v2 - Backup automático - salva tudo quando os dados mudam
+useEffect(() => {
+  const backupDados = {
+    desabafos,
+    mensagensPastor,
+    oracoesEnviadas,
+    jaOrou,
+    data: new Date().toLocaleString('pt-BR')
+  }
+  localStorage.setItem('refugio_backup_dados', JSON.stringify(backupDados))
+}, [desabafos, mensagensPastor, oracoesEnviadas, jaOrou])
 
   useEffect(() => {
     localStorage.setItem('refugio_desabafos', JSON.stringify(desabafos))
@@ -58,14 +107,23 @@ function App() {
     localStorage.setItem('refugio_ja_orou', JSON.stringify(jaOrou))
   }, [jaOrou])
 
+  useEffect(() => {
+    localStorage.setItem('refugio_mensagens_pastor', JSON.stringify(mensagensPastor))
+  }, [mensagensPastor])
+
   const orarPorAlguem = (id: number) => {
     if (jaOrou.includes(id)) return
 
     setDesabafos(desabafos.map(d =>
       d.id === id? {...d, oracoes: d.oracoes + 1 } : d
     ))
-    setOracoesEnviadas(prev => prev + 1)
+    setOracoesEnviadas((prev: number) => prev + 1)
     setJaOrou([...jaOrou, id])
+
+    const versiculoSorteado = VERSICULOS_CURAS[Math.floor(Math.random() * VERSICULOS_CURAS.length)]
+    setVersiculoAtual(versiculoSorteado)
+    setMostrarNotificacao(true)
+    setTimeout(() => setMostrarNotificacao(false), 5000)
   }
 
   const enviarDesabafo = () => {
@@ -83,8 +141,92 @@ function App() {
     setTela('mural')
   }
 
+  // FUNÇÕES DO PASTOR COM CÓDIGO 👇
+  const gerarCodigo = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    let codigo = 'REFUGIO-'
+    for (let i = 0; i < 6; i++) {
+      codigo += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return codigo
+  }
+
+  const enviarMensagemPastor = () => {
+    if (textoMensagemPastor.trim().length < 10) return
+
+    const novoCodigo = gerarCodigo()
+    const nova: MensagemPastor = {
+      id: Date.now(),
+      texto: textoMensagemPastor,
+      data: new Date().toLocaleString('pt-BR'),
+      lida: false,
+      codigo: novoCodigo
+    }
+
+    setMensagensPastor([nova,...mensagensPastor])
+    setCodigoAcompanhamento(novoCodigo)
+    setTextoMensagemPastor('')
+    setTelaPastor('codigo')
+  }
+
+  const buscarResposta = () => {
+    const msg = mensagensPastor.find(m => m.codigo === codigoAcompanhamento.trim().toUpperCase())
+    if (msg) {
+      setMensagemEncontrada(msg)
+      setTelaPastor('verResposta')
+    } else {
+      alert('Código não encontrado. Verifique e tente novamente.')
+    }
+  }
+
+  const enviarRespostaPastor = (id: number) => {
+    if (respostaPastor.trim().length < 5) return
+
+    setMensagensPastor(mensagensPastor.map(m =>
+      m.id === id? {
+       ...m,
+        resposta: respostaPastor,
+        dataResposta: new Date().toLocaleString('pt-BR'),
+        lida: true
+      } : m
+    ))
+    setRespostaPastor('')
+  }
+
+  const loginPastor = () => {
+    // TROCA 'refugio2026' PELA SUA SENHA SECRETA AQUI 👇
+    if (senhaPastor === 'refugio2026') {
+      setPastorLogado(true)
+      setTelaPastor('mensagens')
+      setSenhaPastor('')
+    } else {
+      alert('Senha incorreta')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-calm-50">
+      <AnimatePresence>
+        {mostrarNotificacao && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 max-w-md mx-4"
+          >
+            <div className="bg-white border-2 border-calm-200 text-calm-800 px-6 py-4 rounded-2xl shadow-xl">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🙏</span>
+                <div>
+                  <p className="font-medium text-calm-600 mb-1">Sua oração foi enviada</p>
+                  <p className="text-sm italic leading-relaxed">"{versiculoAtual}"</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
         {tela === 'home' && (
           <motion.div
@@ -111,27 +253,34 @@ function App() {
                 className="text-lg sm:text-xl text-calm-700 font-inter mb-12 leading-relaxed"
               >
                 Um espaço seguro e anônimo.<br />
-                Desabafe sem medo. Receba orações sem se expor.
+                Desabafe sem medo. Receba orações. Fale com um pastor.
               </motion.p>
 
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: 0.6, ease: "easeOut" }}
-                className="flex flex-col sm:flex-row gap-4 justify-center"
+                className="flex flex-col gap-4 justify-center max-w-md mx-auto"
               >
                 <button
                   onClick={() => setTela('escrever')}
-                  className="px-8 py-4 bg-calm-500 text-white text-lg rounded-xl hover:bg-calm-600 transition-colors shadow-lg w-full sm:w-auto"
+                  className="px-8 py-4 bg-calm-500 text-white text-lg rounded-xl hover:bg-calm-600 transition-colors shadow-lg w-full"
                 >
                   Preciso desabafar
                 </button>
 
                 <button
                   onClick={() => setTela('mural')}
-                  className="px-8 py-4 bg-white text-calm-600 text-lg rounded-xl hover:bg-calm-100 transition-colors shadow-lg border-2 border-calm-200 w-full sm:w-auto"
+                  className="px-8 py-4 bg-white text-calm-600 text-lg rounded-xl hover:bg-calm-100 transition-colors shadow-lg border-2 border-calm-200 w-full"
                 >
                   Quero orar por alguém 🙏
+                </button>
+
+                <button
+                  onClick={() => setTela('pastor')}
+                  className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-lg rounded-xl hover:from-amber-600 hover:to-amber-700 transition-colors shadow-lg w-full flex items-center justify-center gap-2"
+                >
+                  <span>✝️</span> Falar com o Pastor
                 </button>
               </motion.div>
 
@@ -195,7 +344,7 @@ function App() {
                         disabled={jaOrou.includes(desabafo.id)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
                           jaOrou.includes(desabafo.id)
-                           ? 'bg-calm-100 text-calm-500 cursor-not-allowed'
+                        ? 'bg-calm-100 text-calm-500 cursor-not-allowed'
                             : 'bg-calm-500 text-white hover:bg-calm-600'
                         }`}
                       >
@@ -227,7 +376,7 @@ function App() {
               </button>
 
               <h2 className="text-3xl font-playfair text-calm-600 mb-6">
-                Desabafe aqui. Ninguém vai te julgar.
+                Desabafe aqui. Oração da confidencialidade.
               </h2>
 
               <textarea
@@ -254,6 +403,277 @@ function App() {
               >
                 Enviar anonimamente
               </button>
+            </div>
+          </motion.div>
+        )}
+
+        {tela === 'pastor' && (
+          <motion.div
+            key="pastor"
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -100 }}
+            className="min-h-screen flex items-center justify-center px-4 py-8"
+          >
+            <div className="w-full max-w-2xl">
+              <button
+                onClick={() => {
+                  setTela('home')
+                  setPastorLogado(false)
+                  setTelaPastor('login')
+                  setMensagemEncontrada(null)
+                  setCodigoAcompanhamento('')
+                }}
+                className="mb-6 text-calm-600 hover:text-calm-700"
+              >
+                ← Voltar
+              </button>
+
+              {!pastorLogado && telaPastor === 'login' && (
+                <div className="bg-white p-8 rounded-2xl shadow-xl">
+                  <h2 className="text-3xl font-playfair text-calm-600 mb-6 text-center">
+                    Área do Pastor
+                  </h2>
+                  <input
+                    type="password"
+                    value={senhaPastor}
+                    onChange={(e) => setSenhaPastor(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && loginPastor()}
+                    placeholder="Digite a senha"
+                    className="w-full p-4 bg-calm-50 rounded-xl border-2 border-calm-200 focus:border-amber-400 focus:outline-none text-calm-800 mb-4"
+                  />
+                  <button
+                    onClick={loginPastor}
+                    className="w-full py-4 bg-amber-500 text-white text-lg rounded-xl hover:bg-amber-600 transition mb-4"
+                  >
+                    Entrar
+                  </button>
+                  <button
+                    onClick={() => setTelaPastor('escrever')}
+                    className="w-full py-3 text-amber-600 hover:text-amber-700 text-sm"
+                  >
+                    Sou membro e quero enviar uma mensagem →
+                  </button>
+                </div>
+              )}
+
+              {telaPastor === 'escrever' && (
+                <div>
+                  <h2 className="text-3xl font-playfair text-calm-600 mb-2">
+                    Fale com o Pastor
+                  </h2>
+                  <p className="text-calm-500 mb-6 text-sm">
+                    Sua mensagem é privada. Apenas o pastor terá acesso. Você receberá um código para acompanhar a resposta.
+                  </p>
+
+                  <textarea
+                    value={textoMensagemPastor}
+                    onChange={(e) => setTextoMensagemPastor(e.target.value)}
+                    placeholder="Escreva sua confissão, pedido de oração ou desabafo..."
+                    className="w-full h-48 p-4 bg-white rounded-xl border-2 border-calm-200 focus:border-amber-400 focus:outline-none text-calm-800 font-inter resize-none"
+                    maxLength={1000}
+                  />
+
+                  <div className="flex items-center justify-between mt-4">
+                    <span className="text-sm text-calm-400">
+                      {textoMensagemPastor.length}/1000 caracteres
+                    </span>
+                    <span className="text-sm text-amber-600 font-medium">
+                      🔒 Confidencial
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={enviarMensagemPastor}
+                    disabled={textoMensagemPastor.trim().length < 10}
+                    className="w-full mt-6 py-4 bg-amber-500 text-white text-lg rounded-xl hover:bg-amber-600 transition disabled:bg-calm-200 disabled:cursor-not-allowed"
+                  >
+                    Enviar ao Pastor
+                  </button>
+
+                  <button
+                    onClick={() => setTelaPastor('verResposta')}
+                    className="w-full mt-3 py-3 text-amber-600 hover:text-amber-700 text-sm border border-amber-200 rounded-xl"
+                  >
+                    Já tenho um código - Ver resposta →
+                  </button>
+
+                  {pastorLogado && (
+                    <button
+                      onClick={() => setTelaPastor('mensagens')}
+                      className="w-full mt-3 py-2 text-calm-500 hover:text-calm-600 text-sm"
+                    >
+                      ← Voltar para mensagens
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {telaPastor === 'codigo' && (
+                <div className="bg-white p-8 rounded-2xl shadow-xl text-center">
+                  <div className="text-5xl mb-4">✉️</div>
+                  <h2 className="text-2xl font-playfair text-calm-600 mb-4">
+                    Mensagem enviada!
+                  </h2>
+                  <p className="text-calm-600 mb-6">
+                    Anote seu código de acompanhamento:
+                  </p>
+                  <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-6 mb-6">
+                    <p className="text-3xl font-mono font-bold text-amber-700 tracking-wider">
+                      {codigoAcompanhamento}
+                    </p>
+                  </div>
+                  <p className="text-sm text-calm-500 mb-6">
+                    Use esse código em "Ver resposta do Pastor" para ler quando o pastor responder.
+                    Guarde com segurança.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setTelaPastor('escrever')
+                      setCodigoAcompanhamento('')
+                    }}
+                    className="w-full py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition"
+                  >
+                    Entendi, anotei o código
+                  </button>
+                </div>
+              )}
+
+              {telaPastor === 'verResposta' && (
+                <div>
+                  <h2 className="text-3xl font-playfair text-calm-600 mb-6 text-center">
+                    Ver Resposta do Pastor
+                  </h2>
+
+                  {!mensagemEncontrada? (
+                    <div className="bg-white p-8 rounded-2xl shadow-xl">
+                      <input
+                        type="text"
+                        value={codigoAcompanhamento}
+                        onChange={(e) => setCodigoAcompanhamento(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === 'Enter' && buscarResposta()}
+                        placeholder="Digite seu código: REFUGIO-XXXXXX"
+                        className="w-full p-4 bg-calm-50 rounded-xl border-2 border-calm-200 focus:border-amber-400 focus:outline-none text-calm-800 mb-4 text-center font-mono text-lg tracking-wider"
+                      />
+                      <button
+                        onClick={buscarResposta}
+                        className="w-full py-4 bg-amber-500 text-white text-lg rounded-xl hover:bg-amber-600 transition mb-4"
+                      >
+                        Buscar Resposta
+                      </button>
+                      <button
+                        onClick={() => setTelaPastor('escrever')}
+                        className="w-full py-2 text-calm-500 hover:text-calm-600 text-sm"
+                      >
+                        ← Voltar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="bg-white p-6 rounded-2xl shadow-md border-l-4 border-calm-300">
+                        <p className="text-xs text-calm-400 mb-2">Sua mensagem - {mensagemEncontrada.data}</p>
+                        <p className="text-calm-800 leading-relaxed">{mensagemEncontrada.texto}</p>
+                      </div>
+
+                      {mensagemEncontrada.resposta? (
+                        <div className="bg-amber-50 p-6 rounded-2xl shadow-md border-l-4 border-amber-400">
+                          <p className="text-xs text-amber-600 mb-2 font-medium">
+                            Resposta do Pastor - {mensagemEncontrada.dataResposta}
+                          </p>
+                          <p className="text-calm-800 leading-relaxed whitespace-pre-wrap">
+                            {mensagemEncontrada.resposta}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-white p-6 rounded-2xl text-center text-calm-400 border-2 border-dashed border-calm-200">
+                          O pastor ainda não respondeu. Ore e volte mais tarde 🙏
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setMensagemEncontrada(null)
+                          setCodigoAcompanhamento('')
+                          setTelaPastor('escrever')
+                        }}
+                        className="w-full py-3 text-calm-500 hover:text-calm-600"
+                      >
+                        ← Voltar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {pastorLogado && telaPastor === 'mensagens' && (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-3xl font-playfair text-calm-600">
+                      Mensagens Recebidas
+                    </h2>
+                    <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
+                      {mensagensPastor.filter(m =>!m.lida &&!m.resposta).length} novas
+                    </span>
+                  </div>
+
+                  {mensagensPastor.length === 0? (
+                    <div className="bg-white p-8 rounded-2xl text-center text-calm-400">
+                      Nenhuma mensagem ainda. O Senhor está preparando corações.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {mensagensPastor.map((msg) => (
+                        <motion.div
+                          key={msg.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`bg-white p-6 rounded-2xl shadow-md border-l-4 ${
+                            msg.lida? 'border-calm-200' : 'border-amber-400'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <span className="text-xs text-calm-400">{msg.data}</span>
+                              <p className="text-xs text-amber-600 font-mono mt-1">Código: {msg.codigo}</p>
+                            </div>
+                            {!msg.lida &&!msg.resposta && (
+                              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
+                                Nova
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-calm-800 leading-relaxed whitespace-pre-wrap mb-4">
+                            {msg.texto}
+                          </p>
+
+                          {msg.resposta? (
+                            <div className="bg-amber-50 p-4 rounded-xl border-l-2 border-amber-300">
+                              <p className="text-xs text-amber-600 mb-2">Sua resposta - {msg.dataResposta}</p>
+                              <p className="text-calm-700 text-sm whitespace-pre-wrap">{msg.resposta}</p>
+                            </div>
+                          ) : (
+                            <div>
+                              <textarea
+                                value={respostaPastor}
+                                onChange={(e) => setRespostaPastor(e.target.value)}
+                                placeholder="Escreva sua resposta pastoral..."
+                                className="w-full h-24 p-3 bg-calm-50 rounded-lg border border-calm-200 focus:border-amber-400 focus:outline-none text-calm-800 text-sm resize-none mb-2"
+                              />
+                              <button
+                                onClick={() => enviarRespostaPastor(msg.id)}
+                                disabled={respostaPastor.trim().length < 5}
+                                className="w-full py-2 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition disabled:bg-calm-200"
+                              >
+                                Enviar Resposta
+                              </button>
+                            </div>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
