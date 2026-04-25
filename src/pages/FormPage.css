@@ -1,0 +1,85 @@
+.form-page {
+  padding: 2rem 1rem 3rem;
+  min-height: 70vh;
+}
+
+.form-page__container {
+  max-width: 700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-page__header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem 2rem;
+  border-radius: 14px;
+  color: white;
+}
+
+.form-page__header--orange {
+  background: linear-gradient(135deg, #e65c00, #ff8c42);
+}
+
+.form-page__header--green {
+  background: linear-gradient(135deg, #1a6b3a, #2d9e5f);
+}
+
+.form-page__icon {
+  font-size: 3rem;
+  flex-shrink: 0;
+}
+
+.form-page__title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.form-page__subtitle {
+  margin: 0.25rem 0 0;
+  opacity: 0.9;
+  font-size: 0.95rem;
+}
+
+.form-page__tips {
+  background: #f8faf8;
+  border: 1px solid #e0ece0;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+
+.form-page__tips h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 0.75rem;
+}
+
+.form-page__tips ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.form-page__tips li {
+  font-size: 0.88rem;
+  color: #555;
+}
+
+@media (max-width: 480px) {
+  .form-page__header {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.25rem;
+  }
+
+  .form-page__title {
+    font-size: 1.4rem;
+  }
+}

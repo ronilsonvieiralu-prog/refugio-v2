@@ -1,0 +1,115 @@
+.help-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #ccc;
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.help-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.help-card--pedido {
+  border-left-color: #e65c00;
+}
+
+.help-card--oferta {
+  border-left-color: #1a6b3a;
+}
+
+.help-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.help-card__icon {
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.help-card__meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.help-card__badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.help-card__badge--pedido {
+  background: #fff0e8;
+  color: #c0410d;
+}
+
+.help-card__badge--oferta {
+  background: #e8f5ee;
+  color: #176234;
+}
+
+.help-card__category {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.help-card__delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #bbb;
+  font-size: 1rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color 0.2s, background 0.2s;
+}
+
+.help-card__delete:hover {
+  color: #e33;
+  background: #fff0f0;
+}
+
+.help-card__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.help-card__description {
+  font-size: 0.9rem;
+  color: #555;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.help-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: #777;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 0.6rem;
+}
+
+.help-card__footer span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
