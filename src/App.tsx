@@ -233,7 +233,7 @@ function App() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-calm-400">{desabafo.tempo}</span>
                         <motion.button whileTap={{ scale: 0.95 }} onClick={() => orarPorAlguem(desabafo.id)} disabled={jaOrou.includes(desabafo.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${ jaOrou.includes(desabafo.id)? 'bg-calm-100 text-calm-500 cursor-not-allowed' : 'bg-calm-500 text-white hover:bg-calm-600' }`}>
-                          <span>{jaOrou.includes(desabafo.id)? '🙏 Orado' : '🙏 Eu oro por você'}</span>
+                          <span>{jaOrou.includes(desabafo.id)? '🙏 Orando' : '🙏 Eu oro por você'}</span>
                           <span className="font-bold">{desabafo.oracoes}</span>
                         </motion.button>
                       </div>
