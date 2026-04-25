@@ -157,7 +157,7 @@ function App() {
   }
 
   const loginPastor = () => {
-    if (senhaPastor === 'refugio2026') {
+    if (senhaPastor === 'Refugio-lu-2026') {
       setPastorLogado(true)
       setTelaPastor('mensagens')
       setSenhaPastor('')
