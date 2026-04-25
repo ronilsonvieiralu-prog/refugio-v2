@@ -178,7 +178,7 @@ function App() {
               <div className="flex items-start gap-3">
                 <span className="text-2xl">🙏</span>
                 <div>
-                  <p className="font-medium text-calm-600 mb-1">Sua oração foi enviada</p>
+                  <p className="font-medium text-calm-600 mb-1">Sua oração foi ouvida</p>
                   <p className="text-sm italic leading-relaxed">"{versiculoAtual}"</p>
                 </div>
               </div>
