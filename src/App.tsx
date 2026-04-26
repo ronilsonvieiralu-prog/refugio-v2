@@ -50,8 +50,8 @@ function RespostaMensagem({ msgId, onEnviar }: { msgId: number, onEnviar: (id: n
     </div>
   )
 }
-
-function App() {
+ 
+function App()}
   const [tela, setTela] = useState<'home' | 'mural' | 'escrever' | 'pastor'>('home')
   const [novoDesabafo, setNovoDesabafo] = useState('')
   const [mostrarNotificacao, setMostrarNotificacao] = useState(false)
@@ -143,15 +143,32 @@ function App() {
 
   if (!error) {
     console.log("7. Salvou com sucesso!"); // LOG 7
-    setNovoDesabafo('')
+    setNovoDesabafo('') 
+    
     await carregarDesabafos()
     setTela('mural')
   } else {
     console.log("8. DEU ERRO:", error.message); // LOG 8
     alert('Erro ao enviar: ' + error.message)
   }
-}
+} // <- fecha a função enviarDesabafo
+
+const deletarDesabafo = async (id: number) => {
+  if (!pastorLogado) return
+  if (confirm('Tem certeza que deseja apagar este desabafo? Esta ação não pode ser desfeita.')) {
+    const { error } = await supabase
+     .from('desabafos')
+     .delete()
+     .eq('id', id)
+
+    if (!error) {
+      setDesabafos(desabafos.filter(d => d.id !== id))
+      setJaOrou(jaOrou.filter(jaId => jaId !== id))
+    }
   }
+}
+
+const topHashtags = useMemo(() => {
 
   const topHashtags = useMemo(() => {
     const stopWords = ['para', 'como', 'mais', 'muito', 'estou', 'sobre', 'ainda', 'depois', 'porque', 'quando', 'minha', 'meu', 'essa', 'esse', 'isso', 'esta', 'está', 'com', 'sem', 'mas', 'que', 'não', 'uma', 'por', 'dos', 'das', 'pelo', 'pela']
@@ -413,5 +430,5 @@ function App() {
       </AnimatePresence>
     </div>
   )
-
+}
 export default App
