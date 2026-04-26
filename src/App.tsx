@@ -1,11 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useMemo } from 'react'
+import { supabase } from './lib/supabase'
 
 interface Desabafo {
   id: number
-  texto: string
+  mensagem: string // mudou de 'texto' pra 'mensagem'
   oracoes: number
-  tempo: string
+  created_at: string // mudou de 'tempo' pra 'created_at'
 }
 
 interface MensagemPastor {
@@ -55,69 +56,105 @@ function App() {
   const [novoDesabafo, setNovoDesabafo] = useState('')
   const [mostrarNotificacao, setMostrarNotificacao] = useState(false)
   const [versiculoAtual, setVersiculoAtual] = useState('')
-  const [mensagensPastor, setMensagensPastor] = useState<MensagemPastor[]>(() => {
-    const salvo = localStorage.getItem('refugio_mensagens_pastor')
-    return salvo? JSON.parse(salvo) : []
-  })
+  const [mensagensPastor, setMensagensPastor] = useState<MensagemPastor[]>([])
   const [textoMensagemPastor, setTextoMensagemPastor] = useState('')
   const [senhaPastor, setSenhaPastor] = useState('')
   const [pastorLogado, setPastorLogado] = useState(false)
   const [telaPastor, setTelaPastor] = useState<'login' | 'mensagens' | 'escrever' | 'codigo' | 'verResposta'>('login')
   const [codigoAcompanhamento, setCodigoAcompanhamento] = useState('')
   const [mensagemEncontrada, setMensagemEncontrada] = useState<MensagemPastor | null>(null)
-  const [desabafos, setDesabafos] = useState<Desabafo[]>(() => {
-    const salvo = localStorage.getItem('refugio_desabafos')
-    return salvo? JSON.parse(salvo) : [
-      { id: 1, texto: "Perdi meu emprego hoje e tô com medo de não conseguir pagar as contas. Me sinto um fracasso.", oracoes: 47, tempo: "há 2 horas" },
-      { id: 2, texto: "Minha ansiedade não me deixa dormir faz 3 dias. Só queria paz na mente.", oracoes: 89, tempo: "há 5 horas" },
-      { id: 3, texto: "Terminei um relacionamento de 4 anos. Dói demais, mas sei que vou ficar bem um dia.", oracoes: 132, tempo: "há 1 dia" }
-    ]
-  })
-  const [oracoesEnviadas, setOracoesEnviadas] = useState<number>(() => {
-    const salvo = localStorage.getItem('refugio_total_oracoes')
-    return salvo? JSON.parse(salvo) : 1247
-  })
+  const [desabafos, setDesabafos] = useState<Desabafo[]>([])
+  const [oracoesEnviadas, setOracoesEnviadas] = useState<number>(0)
   const [jaOrou, setJaOrou] = useState<number[]>(() => {
     const salvo = localStorage.getItem('refugio_ja_orou')
     return salvo? JSON.parse(salvo) : []
   })
   const [buscaMural, setBuscaMural] = useState('')
 
-  useEffect(() => { localStorage.setItem('refugio_desabafos', JSON.stringify(desabafos)) }, [desabafos])
-  useEffect(() => { localStorage.setItem('refugio_total_oracoes', JSON.stringify(oracoesEnviadas)) }, [oracoesEnviadas])
+  // CARREGA DESABAFOS DO SUPABASE
+  useEffect(() => {
+    carregarDesabafos()
+    contarOracoes()
+  }, [])
+
+  const carregarDesabafos = async () => {
+    const { data, error } = await supabase
+     .from('desabafos')
+     .select('*')
+     .order('created_at', { ascending: false })
+
+    if (!error && data) setDesabafos(data)
+  }
+
+  const contarOracoes = async () => {
+    const { data } = await supabase
+     .from('desabafos')
+     .select('oracoes')
+
+    if (data) {
+      const total = data.reduce((acc, curr) => acc + curr.oracoes, 0)
+      setOracoesEnviadas(total)
+    }
+  }
+
   useEffect(() => { localStorage.setItem('refugio_ja_orou', JSON.stringify(jaOrou)) }, [jaOrou])
-  useEffect(() => { localStorage.setItem('refugio_mensagens_pastor', JSON.stringify(mensagensPastor)) }, [mensagensPastor])
 
-  const orarPorAlguem = (id: number) => {
+  const orarPorAlguem = async (id: number) => {
     if (jaOrou.includes(id)) return
-    setDesabafos(desabafos.map(d => d.id === id? {...d, oracoes: d.oracoes + 1 } : d))
-    setOracoesEnviadas((prev: number) => prev + 1)
-    setJaOrou([...jaOrou, id])
-    const versiculoSorteado = VERSICULOS_CURAS[Math.floor(Math.random() * VERSICULOS_CURAS.length)]
-    setVersiculoAtual(versiculoSorteado)
-    setMostrarNotificacao(true)
-    setTimeout(() => setMostrarNotificacao(false), 5000)
+
+    const desabafo = desabafos.find(d => d.id === id)
+    if (!desabafo) return
+
+    const { error } = await supabase
+     .from('desabafos')
+     .update({ oracoes: desabafo.oracoes + 1 })
+     .eq('id', id)
+
+    if (!error) {
+      setDesabafos(desabafos.map(d => d.id === id? {...d, oracoes: d.oracoes + 1 } : d))
+      setOracoesEnviadas((prev: number) => prev + 1)
+      setJaOrou([...jaOrou, id])
+      const versiculoSorteado = VERSICULOS_CURAS[Math.floor(Math.random() * VERSICULOS_CURAS.length)]
+      setVersiculoAtual(versiculoSorteado)
+      setMostrarNotificacao(true)
+      setTimeout(() => setMostrarNotificacao(false), 5000)
+    }
   }
 
-  const enviarDesabafo = () => {
+  const enviarDesabafo = async () => {
     if (novoDesabafo.trim().length < 10) return
-    const novo: Desabafo = { id: Date.now(), texto: novoDesabafo, oracoes: 0, tempo: "agora" }
-    setDesabafos([novo,...desabafos])
-    setNovoDesabafo('')
-    setTela('mural')
+
+    const { error } = await supabase
+     .from('desabafos')
+     .insert({ mensagem: novoDesabafo, oracoes: 0 })
+
+    if (!error) {
+      setNovoDesabafo('')
+      await carregarDesabafos()
+      setTela('mural')
+    } else {
+      alert('Erro ao enviar. Tente novamente.')
+    }
   }
 
-  const deletarDesabafo = (id: number) => {
+  const deletarDesabafo = async (id: number) => {
     if (!pastorLogado) return
     if (confirm('Tem certeza que deseja apagar este desabafo? Esta ação não pode ser desfeita.')) {
-      setDesabafos(desabafos.filter(d => d.id!== id))
-      setJaOrou(jaOrou.filter(jaId => jaId!== id))
+      const { error } = await supabase
+       .from('desabafos')
+       .delete()
+       .eq('id', id)
+
+      if (!error) {
+        setDesabafos(desabafos.filter(d => d.id!== id))
+        setJaOrou(jaOrou.filter(jaId => jaId!== id))
+      }
     }
   }
 
   const topHashtags = useMemo(() => {
     const stopWords = ['para', 'como', 'mais', 'muito', 'estou', 'sobre', 'ainda', 'depois', 'porque', 'quando', 'minha', 'meu', 'essa', 'esse', 'isso', 'esta', 'está', 'com', 'sem', 'mas', 'que', 'não', 'uma', 'por', 'dos', 'das', 'pelo', 'pela']
-    const todasPalavras = desabafos.map(d => d.texto.toLowerCase().replace(/[.,!?;]/g, '')).join(' ').split(' ').filter(p => p.length >= 4 &&!stopWords.includes(p))
+    const todasPalavras = desabafos.map(d => d.mensagem.toLowerCase().replace(/[.,!?;]/g, '')).join(' ').split(' ').filter(p => p.length >= 4 &&!stopWords.includes(p))
     const contagem: Record<string, number> = {}
     todasPalavras.forEach(p => { contagem[p] = (contagem[p] || 0) + 1 })
     return Object.entries(contagem).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([palavra]) => palavra)
@@ -125,7 +162,7 @@ function App() {
 
   const desabafosFiltrados = useMemo(() => {
     if (!buscaMural.trim()) return desabafos
-    return desabafos.filter(d => d.texto.toLowerCase().includes(buscaMural.toLowerCase()))
+    return desabafos.filter(d => d.mensagem.toLowerCase().includes(buscaMural.toLowerCase()))
   }, [desabafos, buscaMural])
 
   const gerarCodigo = () => {
@@ -162,6 +199,17 @@ function App() {
       setTelaPastor('mensagens')
       setSenhaPastor('')
     } else { alert('Senha incorreta') }
+  }
+
+  const formatarTempo = (dataISO: string) => {
+    const diff = Date.now() - new Date(dataISO).getTime()
+    const minutos = Math.floor(diff / 60000)
+    if (minutos < 1) return 'agora'
+    if (minutos < 60) return `há ${minutos} min`
+    const horas = Math.floor(minutos / 60)
+    if (horas < 24) return `há ${horas} hora${horas > 1? 's' : ''}`
+    const dias = Math.floor(horas / 24)
+    return `há ${dias} dia${dias > 1? 's' : ''}`
   }
 
   return (
@@ -224,14 +272,14 @@ function App() {
               <button onClick={() => setTela('escrever')} className="w-full mb-6 py-4 bg-white border-2 border-dashed border-calm-300 rounded-xl text-calm-500 hover:border-calm-400 hover:text-calm-600 transition">+ Escrever meu desabafo</button>
               <div className="space-y-4">
                 {desabafosFiltrados.length === 0? (
-                  <div className="bg-white p-8 rounded-2xl text-center text-calm-400">Nenhum desabafo encontrado com "{buscaMural}"</div>
+                  <div className="bg-white p-8 rounded-2xl text-center text-calm-400">Nenhum desabafo encontrado</div>
                 ) : (
                   desabafosFiltrados.map((desabafo, index) => (
                     <motion.div key={desabafo.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="bg-white p-6 rounded-2xl shadow-md relative">
                       {pastorLogado && (<button onClick={() => deletarDesabafo(desabafo.id)} className="absolute top-3 right-3 text-red-400 hover:text-red-600 text-xs px-2 py-1 rounded hover:bg-red-50 transition" title="Apagar desabafo">✕ Apagar</button>)}
-                      <p className="text-calm-800 leading-relaxed mb-4 font-inter pr-16">{desabafo.texto}</p>
+                      <p className="text-calm-800 leading-relaxed mb-4 font-inter pr-16">{desabafo.mensagem}</p>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-calm-400">{desabafo.tempo}</span>
+                        <span className="text-sm text-calm-400">{formatarTempo(desabafo.created_at)}</span>
                         <motion.button whileTap={{ scale: 0.95 }} onClick={() => orarPorAlguem(desabafo.id)} disabled={jaOrou.includes(desabafo.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${ jaOrou.includes(desabafo.id)? 'bg-calm-100 text-calm-500 cursor-not-allowed' : 'bg-calm-500 text-white hover:bg-calm-600' }`}>
                           <span>{jaOrou.includes(desabafo.id)? '🙏 Orando' : '🙏 Eu oro por você'}</span>
                           <span className="font-bold">{desabafo.oracoes}</span>
