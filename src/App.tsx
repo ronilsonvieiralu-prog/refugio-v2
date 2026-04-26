@@ -87,13 +87,13 @@ function App() {
   }
 
   const contarOracoes = async () => {
-    const { data } = await supabase
-     .from('desabafos')
-     .select('oracoes')
+  const { data } = await supabase
+   .from('desabafos')
+   .select('oracoes')
 
-    if (data) {
-      const total = data.reduce((acc, curr) => acc + curr.oracoes, 0)
-      setOracoesEnviadas(total)
+   if (data) {
+    const total = data.reduce((acc: number, curr: { oracoes: number }) => acc + curr.oracoes, 0)
+    setOracoesEnviadas(total)
     }
   }
 
