@@ -51,7 +51,7 @@ function RespostaMensagem({ msgId, onEnviar }: { msgId: number, onEnviar: (id: n
   )
 }
  
-function App()}
+function App() {
   const [tela, setTela] = useState<'home' | 'mural' | 'escrever' | 'pastor'>('home')
   const [novoDesabafo, setNovoDesabafo] = useState('')
   const [mostrarNotificacao, setMostrarNotificacao] = useState(false)
@@ -431,4 +431,5 @@ const topHashtags = useMemo(() => {
     </div>
   )
 }
+
 export default App
