@@ -121,21 +121,7 @@ function App() {
     }
   }
 
-  const enviarDesabafo = async () => {
-    if (novoDesabafo.trim().length < 10) return
 
-    const { error } = await supabase
-     .from('desabafos')
-     .insert({ mensagem: novoDesabafo, oracoes: 0 })
-
-    if (!error) {
-      setNovoDesabafo('')
-      await carregarDesabafos()
-      setTela('mural')
-    } else {
-      alert('Erro ao enviar. Tente novamente.')
-    }
-  }
 
   const enviarDesabafo = async () => {
   console.log("1. Cliquei em Enviar"); // LOG 1
@@ -427,6 +413,5 @@ function App() {
       </AnimatePresence>
     </div>
   )
-}
 
 export default App
