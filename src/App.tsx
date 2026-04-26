@@ -137,19 +137,34 @@ function App() {
     }
   }
 
-  const deletarDesabafo = async (id: number) => {
-    if (!pastorLogado) return
-    if (confirm('Tem certeza que deseja apagar este desabafo? Esta ação não pode ser desfeita.')) {
-      const { error } = await supabase
-       .from('desabafos')
-       .delete()
-       .eq('id', id)
+  const enviarDesabafo = async () => {
+  console.log("1. Cliquei em Enviar"); // LOG 1
+  
+  if (novoDesabafo.trim().length < 10) {
+    console.log("2. Texto muito curto, parou aqui"); // LOG 2
+    return;
+  }
 
-      if (!error) {
-        setDesabafos(desabafos.filter(d => d.id!== id))
-        setJaOrou(jaOrou.filter(jaId => jaId!== id))
-      }
-    }
+  console.log("3. Texto ok:", novoDesabafo); // LOG 3
+  console.log("4. Tentando salvar no Supabase..."); // LOG 4
+
+  const { data, error } = await supabase
+   .from('desabafos')
+   .insert({ mensagem: novoDesabafo, oracoes: 0 })
+
+  console.log("5. Resposta do Supabase - data:", data); // LOG 5
+  console.log("6. Resposta do Supabase - error:", error); // LOG 6
+
+  if (!error) {
+    console.log("7. Salvou com sucesso!"); // LOG 7
+    setNovoDesabafo('')
+    await carregarDesabafos()
+    setTela('mural')
+  } else {
+    console.log("8. DEU ERRO:", error.message); // LOG 8
+    alert('Erro ao enviar: ' + error.message)
+  }
+}
   }
 
   const topHashtags = useMemo(() => {
