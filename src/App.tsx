@@ -4,9 +4,9 @@ import { supabase } from './lib/supabase'
 
 interface Desabafo {
   id: number
-  mensagem: string // mudou de 'texto' pra 'mensagem'
+  mensagem: string
   oracoes: number
-  created_at: string // mudou de 'tempo' pra 'created_at'
+  created_at: string
 }
 
 interface MensagemPastor {
@@ -50,7 +50,7 @@ function RespostaMensagem({ msgId, onEnviar }: { msgId: number, onEnviar: (id: n
     </div>
   )
 }
- 
+
 function App() {
   const [tela, setTela] = useState<'home' | 'mural' | 'escrever' | 'pastor'>('home')
   const [novoDesabafo, setNovoDesabafo] = useState('')
@@ -79,21 +79,21 @@ function App() {
 
   const carregarDesabafos = async () => {
     const { data, error } = await supabase
-     .from('desabafos')
-     .select('*')
-     .order('created_at', { ascending: false })
+    .from('desabafos')
+    .select('*')
+    .order('created_at', { ascending: false })
 
     if (!error && data) setDesabafos(data)
   }
 
   const contarOracoes = async () => {
-  const { data } = await supabase
-   .from('desabafos')
-   .select('oracoes')
+    const { data } = await supabase
+    .from('desabafos')
+    .select('oracoes')
 
-   if (data) {
-    const total = data.reduce((acc: number, curr: { oracoes: number }) => acc + curr.oracoes, 0)
-    setOracoesEnviadas(total)
+    if (data) {
+      const total = data.reduce((acc: number, curr: { oracoes: number }) => acc + curr.oracoes, 0)
+      setOracoesEnviadas(total)
     }
   }
 
@@ -106,9 +106,9 @@ function App() {
     if (!desabafo) return
 
     const { error } = await supabase
-     .from('desabafos')
-     .update({ oracoes: desabafo.oracoes + 1 })
-     .eq('id', id)
+    .from('desabafos')
+    .update({ oracoes: desabafo.oracoes + 1 })
+    .eq('id', id)
 
     if (!error) {
       setDesabafos(desabafos.map(d => d.id === id? {...d, oracoes: d.oracoes + 1 } : d))
@@ -121,62 +121,59 @@ function App() {
     }
   }
 
-
-
   const enviarDesabafo = async () => {
-  console.log("1. Cliquei em Enviar"); // LOG 1
-  
-  if (novoDesabafo.trim().length < 10) {
-    console.log("2. Texto muito curto, parou aqui"); // LOG 2
-    return;
-  }
+    console.log("1. Cliquei em Enviar")
 
-  console.log("3. Texto ok:", novoDesabafo); // LOG 3
-  console.log("4. Tentando salvar no Supabase..."); // LOG 4
+    if (novoDesabafo.trim().length < 10) {
+      console.log("2. Texto muito curto, parou aqui")
+      return
+    }
 
-  const { data, error } = await supabase
-   .from('desabafos')
-   .insert({ mensagem: novoDesabafo, oracoes: 0 })
+    console.log("3. Texto ok:", novoDesabafo)
+    console.log("4. Tentando salvar no Supabase...")
 
-  console.log("5. Resposta do Supabase - data:", data); // LOG 5
-  console.log("6. Resposta do Supabase - error:", error); // LOG 6
+    const { data, error } = await supabase
+    .from('desabafos')
+    .insert({ mensagem: novoDesabafo, oracoes: 0 })
 
-  if (!error) {
-    console.log("7. Salvou com sucesso!"); // LOG 7
-    setNovoDesabafo('') 
-    
-    await carregarDesabafos()
-    setTela('mural')
-  } else {
-    console.log("8. DEU ERRO:", error.message); // LOG 8
-    alert('Erro ao enviar: ' + error.message)
-  }
-} // <- fecha a função enviarDesabafo
-
-const deletarDesabafo = async (id: number) => {
-  if (!pastorLogado) return
-  if (confirm('Tem certeza que deseja apagar este desabafo? Esta ação não pode ser desfeita.')) {
-    const { error } = await supabase
-     .from('desabafos')
-     .delete()
-     .eq('id', id)
+    console.log("5. Resposta do Supabase - data:", data)
+    console.log("6. Resposta do Supabase - error:", error)
 
     if (!error) {
-      setDesabafos(desabafos.filter(d => d.id !== id))
-      setJaOrou(jaOrou.filter(jaId => jaId !== id))
+      console.log("7. Salvou com sucesso!")
+      setNovoDesabafo('')
+
+      await carregarDesabafos()
+      setTela('mural')
+    } else {
+      console.log("8. DEU ERRO:", error.message)
+      alert('Erro ao enviar: ' + error.message)
     }
   }
-}
 
-const topHashtags = useMemo(() => {
+  const deletarDesabafo = async (id: number) => {
+    if (!pastorLogado) return
+    if (confirm('Tem certeza que deseja apagar este desabafo? Esta ação não pode ser desfeita.')) {
+      const { error } = await supabase
+      .from('desabafos')
+      .delete()
+      .eq('id', id)
 
+      if (!error) {
+        setDesabafos(desabafos.filter(d => d.id!== id))
+        setJaOrou(jaOrou.filter(jaId => jaId!== id))
+      }
+    }
+  }
+
+  // >>> CORRIGI: Removi a linha duplicada e fechei corretamente
   const topHashtags = useMemo(() => {
     const stopWords = ['para', 'como', 'mais', 'muito', 'estou', 'sobre', 'ainda', 'depois', 'porque', 'quando', 'minha', 'meu', 'essa', 'esse', 'isso', 'esta', 'está', 'com', 'sem', 'mas', 'que', 'não', 'uma', 'por', 'dos', 'das', 'pelo', 'pela']
     const todasPalavras = desabafos.map(d => d.mensagem.toLowerCase().replace(/[.,!?;]/g, '')).join(' ').split(' ').filter(p => p.length >= 4 &&!stopWords.includes(p))
     const contagem: Record<string, number> = {}
     todasPalavras.forEach(p => { contagem[p] = (contagem[p] || 0) + 1 })
     return Object.entries(contagem).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([palavra]) => palavra)
-  }, [desabafos])
+  }, [desabafos]) // >>> CORRIGI: Fechou aqui
 
   const desabafosFiltrados = useMemo(() => {
     if (!buscaMural.trim()) return desabafos
@@ -430,6 +427,6 @@ const topHashtags = useMemo(() => {
       </AnimatePresence>
     </div>
   )
-}
+} // >>> CORRIGI: Fecha a function App()
 
 export default App
