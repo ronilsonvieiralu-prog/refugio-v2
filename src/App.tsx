@@ -73,9 +73,39 @@ function App() {
 
   // CARREGA DESABAFOS DO SUPABASE
   useEffect(() => {
-    carregarDesabafos()
-    contarOracoes()
-  }, [])
+  carregarDesabafos()
+  contarOracoes()
+
+  // >>> REALTIME: escuta INSERT e DELETE
+  const channel = supabase
+    .channel('desabafos-realtime')
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'desabafos' },
+      (payload) => {
+        console.log('NOVO DESABAFO:', payload.new)
+        carregarDesabafos() // recarrega lista
+        contarOracoes() // atualiza contador
+      }
+    )
+    .on('postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'desabafos' },
+      (payload) => {
+        console.log('DESABAFO APAGADO:', payload.old)
+        // Remove só o item apagado - mais rápido que recarregar tudo
+        setDesabafos(prev => prev.filter(d => d.id !== payload.old.id))
+        setJaOrou(prev => prev.filter(id => id !== payload.old.id))
+        contarOracoes()
+      }
+    )
+    .subscribe((status) => {
+      console.log('Realtime status:', status) // tem que mostrar SUBSCRIBED
+    })
+
+  // Desconecta quando sair da tela
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}, [])
 
   const carregarDesabafos = async () => {
     const { data, error } = await supabase
