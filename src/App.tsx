@@ -5,15 +5,15 @@ console.log('URL SUPABASE:', import.meta.env.VITE_SUPABASE_URL)
 console.log('KEY SUPABASE:', import.meta.env.VITE_SUPABASE_ANON_KEY?.slice(0,20))
 
 interface Desabafo {
-  id: number
+  id: string
   mensagem: string
   oracoes: number
   created_at: string
-  codigo_dono: string // NOVO
+  codigo_dono: string
 }
 
 interface MensagemPastor {
-  id: number
+  id: string
   texto: string
   data: string
   lida: boolean
@@ -32,7 +32,7 @@ const VERSICULOS_CURAS = [
   "Tudo posso naquele que me fortalece. Filipenses 4:13"
 ]
 
-function RespostaMensagem({ msgId, onEnviar }: { msgId: number, onEnviar: (id: number, texto: string) => void }) {
+function RespostaMensagem({ msgId, onEnviar }: { msgId: string, onEnviar: (id: string, texto: string) => void }) {
   const [texto, setTexto] = useState('')
 
   return (
@@ -68,85 +68,84 @@ function App() {
   const [mensagemEncontrada, setMensagemEncontrada] = useState<MensagemPastor | null>(null)
   const [desabafos, setDesabafos] = useState<Desabafo[]>([])
   const [oracoesEnviadas, setOracoesEnviadas] = useState<number>(0)
-  const [jaOrou, setJaOrou] = useState<number[]>(() => {
-    const salvo = localStorage.getItem('refugio_ja_orou')
-    return salvo? JSON.parse(salvo) : []
-  })
   const [buscaMural, setBuscaMural] = useState('')
   const [meuCodigo] = useState<string>(() => {
-  const salvo = localStorage.getItem('refugio_meu_codigo')
-  if (salvo) return salvo
-  const novo = 'USER-' + Math.random().toString(36).substr(2, 9).toUpperCase()
-  localStorage.setItem('refugio_meu_codigo', novo)
-  return novo
-})
+    const salvo = localStorage.getItem('refugio_meu_codigo')
+    if (salvo) return salvo
+    const novo = 'USER-' + Math.random().toString(36).substr(2, 9).toUpperCase()
+    localStorage.setItem('refugio_meu_codigo', novo)
+    return novo
+  })
 
-const [oracoesRecebidas, setOracoesRecebidas] = useState<number>(0)
+  const [oracoesRecebidas, setOracoesRecebidas] = useState<number>(0)
 
   // CARREGA DESABAFOS DO SUPABASE
   useEffect(() => {
-  carregarDesabafos()
-  contarOracoes()
+    carregarDesabafos()
+    contarOracoes()
 
-  // >>> REALTIME: escuta INSERT e DELETE
-  const channel = supabase
-    .channel('desabafos-realtime')
-    .on('postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'desabafos' },
-      (payload) => {
-        console.log('NOVO DESABAFO:', payload.new)
-        carregarDesabafos() // recarrega lista
-        contarOracoes() // atualiza contador
-      }
-    )
-    .on('postgres_changes',
-      { event: 'DELETE', schema: 'public', table: 'desabafos' },
-      (payload) => {
-        console.log('DESABAFO APAGADO:', payload.old)
-        // Remove só o item apagado - mais rápido que recarregar tudo
-        setDesabafos(prev => prev.filter(d => d.id !== payload.old.id))
-        setJaOrou(prev => prev.filter(id => id !== payload.old.id))
-        contarOracoes()
-      }
-    )
-    .subscribe((status) => {
-      console.log('Realtime status:', status) // tem que mostrar SUBSCRIBED
-    })
+    const channel = supabase
+     .channel('desabafos-realtime')
+     .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'desabafos' },
+        (payload) => {
+          console.log('NOVO DESABAFO:', payload.new)
+          carregarDesabafos()
+          contarOracoes()
+        }
+      )
+     .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'desabafos' },
+        (payload) => {
+          console.log('DESABAFO APAGADO:', payload.old)
+          setDesabafos(prev => prev.filter(d => d.id!== payload.old.id))
+          contarOracoes()
+        }
+      )
+     .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'desabafos' },
+        (payload) => {
+          console.log('DESABAFO ATUALIZADO:', payload.new)
+          setDesabafos(prev => prev.map(d => d.id === payload.new.id? payload.new as Desabafo : d))
+        }
+      )
+     .subscribe((status) => {
+        console.log('Realtime status:', status)
+      })
 
-  // Desconecta quando sair da tela
-  return () => {
-    supabase.removeChannel(channel)
-  }
-}, [])
-
-useEffect(() => {
-  const contarMinhasOracoes = async () => {
-    const { data } = await supabase
-      .from('desabafos')
-      .select('oracoes')
-      .eq('codigo_dono', meuCodigo)
-    
-    if (data) {
-      const total = data.reduce((acc: number, curr: { oracoes: number }) => acc + curr.oracoes, 0)
-      setOracoesRecebidas(total)
+    return () => {
+      supabase.removeChannel(channel)
     }
-  }
-  contarMinhasOracoes()
-}, [meuCodigo, desabafos])
+  }, [])
+
+  useEffect(() => {
+    const contarMinhasOracoes = async () => {
+      const { data } = await supabase
+       .from('desabafos')
+       .select('oracoes')
+       .eq('codigo_dono', meuCodigo)
+
+      if (data) {
+        const total = data.reduce((acc: number, curr: { oracoes: number }) => acc + curr.oracoes, 0)
+        setOracoesRecebidas(total)
+      }
+    }
+    contarMinhasOracoes()
+  }, [meuCodigo, desabafos])
 
   const carregarDesabafos = async () => {
     const { data, error } = await supabase
-    .from('desabafos')
-    .select('*')
-    .order('created_at', { ascending: false })
+     .from('desabafos')
+     .select('*')
+     .order('created_at', { ascending: false })
 
     if (!error && data) setDesabafos(data)
   }
 
   const contarOracoes = async () => {
     const { data } = await supabase
-    .from('desabafos')
-    .select('oracoes')
+     .from('desabafos')
+     .select('oracoes')
 
     if (data) {
       const total = data.reduce((acc: number, curr: { oracoes: number }) => acc + curr.oracoes, 0)
@@ -154,23 +153,41 @@ useEffect(() => {
     }
   }
 
-  useEffect(() => { localStorage.setItem('refugio_ja_orou', JSON.stringify(jaOrou)) }, [jaOrou])
+  // FEATURE 2: Funções de oração
+  const getOracoesVotadas = (): string[] => {
+    const salvos = localStorage.getItem('refugio_oracoes_votadas')
+    return salvos? JSON.parse(salvos) : []
+  }
 
-  const orarPorAlguem = async (id: number) => {
-    if (jaOrou.includes(id)) return
+  const handleOrar = async (desabafoId: string) => {
+    const jaVotou = getOracoesVotadas()
 
-    const desabafo = desabafos.find(d => d.id === id)
-    if (!desabafo) return
+    if (jaVotou.includes(desabafoId)) {
+      alert('Você já orou por esse pedido 🙏')
+      return
+    }
+
+    const desabafoAtual = desabafos.find(d => d.id === desabafoId)
+    if (!desabafoAtual) return
 
     const { error } = await supabase
-    .from('desabafos')
-    .update({ oracoes: desabafo.oracoes + 1 })
-    .eq('id', id)
+     .from('desabafos')
+     .update({ oracoes: desabafoAtual.oracoes + 1 })
+     .eq('id', desabafoId)
 
     if (!error) {
-      setDesabafos(desabafos.map(d => d.id === id? {...d, oracoes: d.oracoes + 1 } : d))
+      setDesabafos(desabafos.map(d =>
+        d.id === desabafoId
+         ? {...d, oracoes: d.oracoes + 1 }
+          : d
+      ))
       setOracoesEnviadas((prev: number) => prev + 1)
-      setJaOrou([...jaOrou, id])
+
+      localStorage.setItem(
+        'refugio_oracoes_votadas',
+        JSON.stringify([...jaVotou, desabafoId])
+      )
+
       const versiculoSorteado = VERSICULOS_CURAS[Math.floor(Math.random() * VERSICULOS_CURAS.length)]
       setVersiculoAtual(versiculoSorteado)
       setMostrarNotificacao(true)
@@ -190,8 +207,8 @@ useEffect(() => {
     console.log("4. Tentando salvar no Supabase...")
 
     const { data, error } = await supabase
-    .from('desabafos')
-    .insert({ mensagem: novoDesabafo, oracoes: 0, codigo_dono: meuCodigo })
+     .from('desabafos')
+     .insert({ mensagem: novoDesabafo, oracoes: 0, codigo_dono: meuCodigo })
 
     console.log("5. Resposta do Supabase - data:", data)
     console.log("6. Resposta do Supabase - error:", error)
@@ -199,7 +216,6 @@ useEffect(() => {
     if (!error) {
       console.log("7. Salvou com sucesso!")
       setNovoDesabafo('')
-
       await carregarDesabafos()
       setTela('mural')
     } else {
@@ -208,29 +224,27 @@ useEffect(() => {
     }
   }
 
-  const deletarDesabafo = async (id: number) => {
+  const deletarDesabafo = async (id: string) => {
     if (!pastorLogado) return
     if (confirm('Tem certeza que deseja apagar este desabafo? Esta ação não pode ser desfeita.')) {
       const { error } = await supabase
-      .from('desabafos')
-      .delete()
-      .eq('id', id)
+       .from('desabafos')
+       .delete()
+       .eq('id', id)
 
       if (!error) {
         setDesabafos(desabafos.filter(d => d.id!== id))
-        setJaOrou(jaOrou.filter(jaId => jaId!== id))
       }
     }
   }
 
-  // >>> CORRIGI: Removi a linha duplicada e fechei corretamente
   const topHashtags = useMemo(() => {
     const stopWords = ['para', 'como', 'mais', 'muito', 'estou', 'sobre', 'ainda', 'depois', 'porque', 'quando', 'minha', 'meu', 'essa', 'esse', 'isso', 'esta', 'está', 'com', 'sem', 'mas', 'que', 'não', 'uma', 'por', 'dos', 'das', 'pelo', 'pela']
     const todasPalavras = desabafos.map(d => d.mensagem.toLowerCase().replace(/[.,!?;]/g, '')).join(' ').split(' ').filter(p => p.length >= 4 &&!stopWords.includes(p))
     const contagem: Record<string, number> = {}
     todasPalavras.forEach(p => { contagem[p] = (contagem[p] || 0) + 1 })
     return Object.entries(contagem).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([palavra]) => palavra)
-  }, [desabafos]) // >>> CORRIGI: Fechou aqui
+  }, [desabafos])
 
   const desabafosFiltrados = useMemo(() => {
     if (!buscaMural.trim()) return desabafos
@@ -247,7 +261,13 @@ useEffect(() => {
   const enviarMensagemPastor = () => {
     if (textoMensagemPastor.trim().length < 10) return
     const novoCodigo = gerarCodigo()
-    const nova: MensagemPastor = { id: Date.now(), texto: textoMensagemPastor, data: new Date().toLocaleString('pt-BR'), lida: false, codigo: novoCodigo }
+    const nova: MensagemPastor = {
+      id: Date.now().toString(),
+      texto: textoMensagemPastor,
+      data: new Date().toLocaleString('pt-BR'),
+      lida: false,
+      codigo: novoCodigo
+    }
     setMensagensPastor([nova,...mensagensPastor])
     setCodigoAcompanhamento(novoCodigo)
     setTextoMensagemPastor('')
@@ -256,13 +276,21 @@ useEffect(() => {
 
   const buscarResposta = () => {
     const msg = mensagensPastor.find(m => m.codigo === codigoAcompanhamento.trim().toUpperCase())
-    if (msg) { setMensagemEncontrada(msg); setTelaPastor('verResposta') }
-    else { alert('Código não encontrado. Verifique e tente novamente.') }
+    if (msg) {
+      setMensagemEncontrada(msg);
+      setTelaPastor('verResposta')
+    } else {
+      alert('Código não encontrado. Verifique e tente novamente.')
+    }
   }
 
-  const enviarRespostaPastor = (id: number, resposta: string) => {
+  const enviarRespostaPastor = (id: string, resposta: string) => {
     if (resposta.trim().length < 5) return
-    setMensagensPastor(mensagensPastor.map(m => m.id === id? {...m, resposta: resposta, dataResposta: new Date().toLocaleString('pt-BR'), lida: true } : m))
+    setMensagensPastor(mensagensPastor.map(m =>
+      m.id === id
+       ? {...m, resposta: resposta, dataResposta: new Date().toLocaleString('pt-BR'), lida: true }
+        : m
+    ))
   }
 
   const loginPastor = () => {
@@ -270,7 +298,9 @@ useEffect(() => {
       setPastorLogado(true)
       setTelaPastor('mensagens')
       setSenhaPastor('')
-    } else { alert('Senha incorreta') }
+    } else {
+      alert('Senha incorreta')
+    }
   }
 
   const formatarTempo = (dataISO: string) => {
@@ -311,7 +341,7 @@ useEffect(() => {
           <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-h-screen flex items-center justify-center overflow-hidden px-4">
             <div className="text-center w-full max-w-2xl">
               <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} className="text-5xl sm:text-6xl md:text-7xl font-playfair text-calm-600 mb-6">Refúgio</motion.h1>
-              <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }} className="text-lg sm:text-xl text-calm-700 font-inter mb-12 leading-relaxed">Um espaço seguro e anônimo.<br />Desabafe sem medo. Receba orações. Fale com um pastor.</motion.p>
+              <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }} className="text-lg sm:text-xl text-calm-700 font-inter mb-12 leading-relaxed">Um espaço seguro e anônimo.<br />Desabafe sem medo. Receba orações. Pr.Refúgio.</motion.p>
               <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.6, ease: "easeOut" }} className="flex flex-col gap-4 justify-center max-w-md mx-auto">
                 <button onClick={() => setTela('escrever')} className="px-8 py-4 bg-calm-500 text-white text-lg rounded-xl hover:bg-calm-600 transition-colors shadow-lg w-full">Preciso desabafar</button>
                 <button onClick={() => setTela('mural')} className="px-8 py-4 bg-white text-calm-600 text-lg rounded-xl hover:bg-calm-100 transition-colors shadow-lg border-2 border-calm-200 w-full">Quero orar por alguém 🙏</button>
@@ -319,17 +349,17 @@ useEffect(() => {
               </motion.div>
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }} className="mt-16 text-sm text-calm-500">Hoje, {oracoesEnviadas.toLocaleString()} orações foram enviadas</motion.p>
               {oracoesRecebidas > 0 && (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: 1.4 }}
-    className="mt-6 bg-amber-50 border border-amber-200 px-6 py-3 rounded-2xl inline-block"
-  >
-    <p className="text-amber-700 font-medium">
-      🙏 Você recebeu {oracoesRecebidas} {oracoesRecebidas === 1 ? 'oração' : 'orações'}
-    </p>
-  </motion.div>
-)}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.4 }}
+                  className="mt-6 bg-amber-50 border border-amber-200 px-6 py-3 rounded-2xl inline-block"
+                >
+                  <p className="text-amber-700 font-medium">
+                    🙏 Você recebeu {oracoesRecebidas} {oracoesRecebidas === 1? 'oração' : 'orações'}
+                  </p>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}
@@ -358,19 +388,31 @@ useEffect(() => {
                 {desabafosFiltrados.length === 0? (
                   <div className="bg-white p-8 rounded-2xl text-center text-calm-400">Nenhum desabafo encontrado</div>
                 ) : (
-                  desabafosFiltrados.map((desabafo, index) => (
-                    <motion.div key={desabafo.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="bg-white p-6 rounded-2xl shadow-md relative">
-                      {pastorLogado && (<button onClick={() => deletarDesabafo(desabafo.id)} className="absolute top-3 right-3 text-red-400 hover:text-red-600 text-xs px-2 py-1 rounded hover:bg-red-50 transition" title="Apagar desabafo">✕ Apagar</button>)}
-                      <p className="text-calm-800 leading-relaxed mb-4 font-inter pr-16">{desabafo.mensagem}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-calm-400">{formatarTempo(desabafo.created_at)}</span>
-                        <motion.button whileTap={{ scale: 0.95 }} onClick={() => orarPorAlguem(desabafo.id)} disabled={jaOrou.includes(desabafo.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${ jaOrou.includes(desabafo.id)? 'bg-calm-100 text-calm-500 cursor-not-allowed' : 'bg-calm-500 text-white hover:bg-calm-600' }`}>
-                          <span>{jaOrou.includes(desabafo.id)? '🙏 Orando' : '🙏 Eu oro por você'}</span>
-                          <span className="font-bold">{desabafo.oracoes}</span>
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  ))
+                  desabafosFiltrados.map((desabafo, index) => {
+                    const jaVotou = getOracoesVotadas().includes(desabafo.id)
+                    return (
+                      <motion.div key={desabafo.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="bg-white p-6 rounded-2xl shadow-md relative">
+                        {pastorLogado && (<button onClick={() => deletarDesabafo(desabafo.id)} className="absolute top-3 right-3 text-red-400 hover:text-red-600 text-xs px-2 py-1 rounded hover:bg-red-50 transition" title="Apagar desabafo">✕ Apagar</button>)}
+                        <p className="text-calm-800 leading-relaxed mb-4 font-inter pr-16">{desabafo.mensagem}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-calm-400">{formatarTempo(desabafo.created_at)}</span>
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleOrar(desabafo.id)}
+                            disabled={jaVotou}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                              jaVotou
+                               ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                                : 'bg-calm-500 text-white hover:bg-calm-600'
+                            }`}
+                          >
+                            <span>{jaVotou? '🙏 Orando' : '🙏 Eu oro por você'}</span>
+                            <span className="font-bold">{desabafo.oracoes}</span>
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    )
+                  })
                 )}
               </div>
             </div>
@@ -496,6 +538,6 @@ useEffect(() => {
       </AnimatePresence>
     </div>
   )
-} // >>> CORRIGI: Fecha a function App()
+}
 
 export default App
