@@ -1,12 +1,15 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from './lib/supabase'
+console.log('URL SUPABASE:', import.meta.env.VITE_SUPABASE_URL)
+console.log('KEY SUPABASE:', import.meta.env.VITE_SUPABASE_ANON_KEY?.slice(0,20))
 
 interface Desabafo {
   id: number
   mensagem: string
   oracoes: number
   created_at: string
+  codigo_dono: string // NOVO
 }
 
 interface MensagemPastor {
@@ -70,6 +73,15 @@ function App() {
     return salvo? JSON.parse(salvo) : []
   })
   const [buscaMural, setBuscaMural] = useState('')
+  const [meuCodigo] = useState<string>(() => {
+  const salvo = localStorage.getItem('refugio_meu_codigo')
+  if (salvo) return salvo
+  const novo = 'USER-' + Math.random().toString(36).substr(2, 9).toUpperCase()
+  localStorage.setItem('refugio_meu_codigo', novo)
+  return novo
+})
+
+const [oracoesRecebidas, setOracoesRecebidas] = useState<number>(0)
 
   // CARREGA DESABAFOS DO SUPABASE
   useEffect(() => {
@@ -106,6 +118,21 @@ function App() {
     supabase.removeChannel(channel)
   }
 }, [])
+
+useEffect(() => {
+  const contarMinhasOracoes = async () => {
+    const { data } = await supabase
+      .from('desabafos')
+      .select('oracoes')
+      .eq('codigo_dono', meuCodigo)
+    
+    if (data) {
+      const total = data.reduce((acc: number, curr: { oracoes: number }) => acc + curr.oracoes, 0)
+      setOracoesRecebidas(total)
+    }
+  }
+  contarMinhasOracoes()
+}, [meuCodigo, desabafos])
 
   const carregarDesabafos = async () => {
     const { data, error } = await supabase
@@ -164,7 +191,7 @@ function App() {
 
     const { data, error } = await supabase
     .from('desabafos')
-    .insert({ mensagem: novoDesabafo, oracoes: 0 })
+    .insert({ mensagem: novoDesabafo, oracoes: 0, codigo_dono: meuCodigo })
 
     console.log("5. Resposta do Supabase - data:", data)
     console.log("6. Resposta do Supabase - error:", error)
@@ -291,6 +318,18 @@ function App() {
                 <button onClick={() => setTela('pastor')} className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-lg rounded-xl hover:from-amber-600 hover:to-amber-700 transition-colors shadow-lg w-full flex items-center justify-center gap-2"><span>✝️</span> Falar com o Pastor</button>
               </motion.div>
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }} className="mt-16 text-sm text-calm-500">Hoje, {oracoesEnviadas.toLocaleString()} orações foram enviadas</motion.p>
+              {oracoesRecebidas > 0 && (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 1.4 }}
+    className="mt-6 bg-amber-50 border border-amber-200 px-6 py-3 rounded-2xl inline-block"
+  >
+    <p className="text-amber-700 font-medium">
+      🙏 Você recebeu {oracoesRecebidas} {oracoesRecebidas === 1 ? 'oração' : 'orações'}
+    </p>
+  </motion.div>
+)}
             </div>
           </motion.div>
         )}
