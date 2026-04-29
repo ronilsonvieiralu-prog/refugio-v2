@@ -370,6 +370,7 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
       setPastorLogado(true)
       setTelaPastor('mensagens')
       setSenhaPastor('')
+       carregarMensagensPastor()
     } else {
       alert('Senha incorreta')
     }
@@ -652,88 +653,87 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
 
       {/* MODAL DE LOGIN - POPUP */}
       {mostrarModalLogin && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-50">
-    <motion.div
-      initial={{ scale: 0.9, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl text-center relative"
-    >
-      <button
-        onClick={() => setMostrarModalLogin(false)}
-        className="absolute top-4 right-4 text-calm-400 hover:text-calm-600"
-      >
-        ✕
-      </button>
-
-      <h2 className="text-3xl font-playfair text-calm-600 mb-2">Crie seu nome</h2>
-      <p className="text-calm-500 mb-6">Seu anonimato bíblico</p>
-
-      <p className="text-sm font-medium mb-3">Você é:</p>
-      <div className="flex gap-3 mb-6">
-        <button
-          onClick={() => handleGerarNome('homem')}
-          className={`flex-1 py-3 rounded-xl border-2 ${genero === 'homem'? 'bg-calm-500 text-white border-calm-500' : 'bg-white border-calm-200 text-calm-600'}`}
-        >
-          Homem
-        </button>
-        <button
-          onClick={() => handleGerarNome('mulher')}
-          className={`flex-1 py-3 rounded-xl border-2 ${genero === 'mulher'? 'bg-calm-500 text-white border-calm-500' : 'bg-white border-calm-200 text-calm-600'}`}
-        >
-          Mulher
-        </button>
-      </div>
-
-      {nomeBiblico && (
-        <>
-          <p className="text-sm text-calm-500 mb-2">Seu nome será:</p>
-          <h3 className="text-2xl font-playfair text-calm-600 mb-3">{nomeBiblico}</h3>
-          <button
-            onClick={() => genero && handleGerarNome(genero)}
-            className="text-sm text-calm-500 hover:text-calm-700"
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center px-4 z-50 overflow-y-auto py-8">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md bg-white p-6 sm:p-8 rounded-2xl shadow-xl text-center relative my-auto"
           >
-            Gerar outro 🎲
-          </button>
+            <button
+              onClick={() => setMostrarModalLogin(false)}
+              className="absolute top-4 right-4 text-calm-400 hover:text-calm-600 text-xl"
+            >
+              ✕
+            </button>
 
-          <input
-            type="password"
-            value={senhaRefugio}
-            onChange={(e) => setSenhaRefugio(e.target.value)}
-            placeholder="Crie uma senha pra voltar"
-            className="w-full mt-4 p-3 bg-calm-50 rounded-xl border-2 border-calm-200 focus:border-calm-400 focus:outline-none"
-          />
+            <h2 className="text-2xl sm:text-3xl font-playfair text-calm-600 mb-2">Crie seu nome</h2>
+            <p className="text-calm-500 mb-6 text-sm sm:text-base">Seu anonimato bíblico</p>
 
-          <button
-            onClick={fazerLoginRefugio}
-            className="w-full mt-4 py-4 bg-calm-500 text-white text-lg rounded-xl hover:bg-calm-600"
-          >
-            Entrar no Refúgio
-          </button>
+            <p className="text-sm font-medium mb-3">Você é:</p>
+            <div className="flex gap-3 mb-6">
+              <button
+                onClick={() => handleGerarNome('homem')}
+                className={`flex-1 py-3 rounded-xl border-2 text-sm sm:text-base ${genero === 'homem' ? 'bg-calm-500 text-white border-calm-500' : 'bg-white border-calm-200 text-calm-600'}`}
+              >
+                Homem
+              </button>
+              <button
+                onClick={() => handleGerarNome('mulher')}
+                className={`flex-1 py-3 rounded-xl border-2 text-sm sm:text-base ${genero === 'mulher' ? 'bg-calm-500 text-white border-calm-500' : 'bg-white border-calm-200 text-calm-600'}`}
+              >
+                Mulher
+              </button>
+            </div>
 
-          <button
-            onClick={async () => {
-              const nomeRecuperar = prompt('Digite seu nome bíblico pra recuperar:')
-              if (!nomeRecuperar) return
-              
-              const { data } = await supabase
-                .from('usuarios_refugio')
-                .select('senha')
-                .eq('nome_biblico', nomeRecuperar)
-                .maybeSingle()
-              
-              if (data) {
-                alert(`Sua senha é: ${data.senha}\n\nAnota aí e guarda bem!`)
-              } else {
-                alert('Nome não encontrado')
-              }
-            }}
-            className="w-full mt-2 text-xs text-calm-400 hover:text-calm-600"
-          >
-            Esqueci minha senha
-          </button>
-        </>
-      )}
+            {nomeBiblico && (
+              <>
+                <p className="text-sm text-calm-500 mb-2">Seu nome será:</p>
+                <h3 className="text-xl sm:text-2xl font-playfair text-calm-600 mb-3">{nomeBiblico}</h3>
+                <button
+                  onClick={() => genero && handleGerarNome(genero)}
+                  className="text-sm text-calm-500 hover:text-calm-700 mb-4"
+                >
+                  Gerar outro 🎲
+                </button>
 
+                <input
+                  type="password"
+                  value={senhaRefugio}
+                  onChange={(e) => setSenhaRefugio(e.target.value)}
+                  placeholder="Crie uma senha pra voltar"
+                  className="w-full mt-2 p-3 bg-calm-50 rounded-xl border-2 border-calm-200 focus:border-calm-400 focus:outline-none text-sm sm:text-base"
+                />
+
+                <button
+                  onClick={fazerLoginRefugio}
+                  className="w-full mt-4 py-4 bg-calm-500 text-white text-base sm:text-lg rounded-xl hover:bg-calm-600"
+                >
+                  Entrar no Refúgio
+                </button>
+
+                <button
+                  onClick={async () => {
+                    const nomeRecuperar = prompt('Digite seu nome bíblico pra recuperar:')
+                    if (!nomeRecuperar) return
+                    
+                    const { data } = await supabase
+                      .from('usuarios_refugio')
+                      .select('senha')
+                      .eq('nome_biblico', nomeRecuperar)
+                      .maybeSingle()
+                    
+                    if (data) {
+                      alert(`Sua senha é: ${data.senha}\n\nAnota aí e guarda bem!`)
+                    } else {
+                      alert('Nome não encontrado')
+                    }
+                  }}
+                  className="w-full mt-2 text-xs text-calm-400 hover:text-calm-600"
+                >
+                  Esqueci minha senha
+                </button>
+              </>
+            )}
           </motion.div>
         </div>
       )}
@@ -741,4 +741,4 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
   )
 }
 
-export default App 
+export default App
