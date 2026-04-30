@@ -53,6 +53,8 @@ function RespostaMensagem({ msgId, onEnviar }: { msgId: string, onEnviar: (id: s
   )
 }
 
+
+// AQUI COMEÇA O APP
 function App() {
   const [tela, setTela] = useState<'home' | 'mural' | 'escrever' | 'pastor'>('home')
   const [novoDesabafo, setNovoDesabafo] = useState('')
@@ -91,14 +93,14 @@ function App() {
   }
 
   const fazerLoginRefugio = async () => {
-  if (!nomeBiblico || !senhaRefugio || nomeBiblico === 'Gerando...') {
+  if (!nomeBiblico ||!senhaRefugio || nomeBiblico === 'Gerando...') {
     alert('Escolha um gênero e crie uma senha!')
     return
   }
 
     const { error } = await supabase
-     .from('usuarios_refugio')
-     .insert({
+   .from('usuarios_refugio')
+   .insert({
         nome_biblico: nomeBiblico,
         genero: genero,
         senha: senhaRefugio
@@ -115,11 +117,9 @@ function App() {
   }
 
 const fazerLogoutRefugio = () => {
-  // Não apaga o localStorage, só reseta o estado
   setNomeBiblico('')
   setSenhaRefugio('')
   setGenero(null)
-  // localStorage continua salvo
   }
 
   useEffect(() => {
@@ -127,28 +127,28 @@ const fazerLogoutRefugio = () => {
     contarOracoes()
 
     const channel = supabase
-     .channel('desabafos-realtime')
-     .on('postgres_changes',
+   .channel('desabafos-realtime')
+   .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'desabafos' },
         () => {
           carregarDesabafos()
           contarOracoes()
         }
       )
-     .on('postgres_changes',
+   .on('postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'desabafos' },
         (payload) => {
           setDesabafos(prev => prev.filter(d => d.id!== payload.old.id))
           contarOracoes()
         }
       )
-     .on('postgres_changes',
+   .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'desabafos' },
         (payload) => {
           setDesabafos(prev => prev.map(d => d.id === payload.new.id? payload.new as Desabafo : d))
         }
       )
-     .subscribe()
+   .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
@@ -158,9 +158,9 @@ const fazerLogoutRefugio = () => {
   useEffect(() => {
     const contarMinhasOracoes = async () => {
       const { data } = await supabase
-       .from('desabafos')
-       .select('oracoes')
-       .eq('codigo_dono', meuCodigo)
+     .from('desabafos')
+     .select('oracoes')
+     .eq('codigo_dono', meuCodigo)
 
       if (data) {
         const total = data.reduce((acc: number, curr: { oracoes: number }) => acc + curr.oracoes, 0)
@@ -172,17 +172,17 @@ const fazerLogoutRefugio = () => {
 
   const carregarDesabafos = async () => {
     const { data, error } = await supabase
-     .from('desabafos')
-     .select('*')
-     .order('created_at', { ascending: false })
+   .from('desabafos')
+   .select('*')
+   .order('created_at', { ascending: false })
 
     if (!error && data) setDesabafos(data)
   }
 
   const contarOracoes = async () => {
     const { data } = await supabase
-     .from('desabafos')
-     .select('oracoes')
+   .from('desabafos')
+   .select('oracoes')
 
     if (data) {
       const total = data.reduce((acc: number, curr: { oracoes: number }) => acc + curr.oracoes, 0)
@@ -207,14 +207,14 @@ const fazerLogoutRefugio = () => {
     if (!desabafoAtual) return
 
     const { error } = await supabase
-     .from('desabafos')
-     .update({ oracoes: desabafoAtual.oracoes + 1 })
-     .eq('id', desabafoId)
+   .from('desabafos')
+   .update({ oracoes: desabafoAtual.oracoes + 1 })
+   .eq('id', desabafoId)
 
     if (!error) {
       setDesabafos(desabafos.map(d =>
         d.id === desabafoId
-         ? {...d, oracoes: d.oracoes + 1 }
+       ? {...d, oracoes: d.oracoes + 1 }
           : d
       ))
       setOracoesEnviadas((prev: number) => prev + 1)
@@ -235,8 +235,8 @@ const fazerLogoutRefugio = () => {
     if (novoDesabafo.trim().length < 10) return
 
     const { error } = await supabase
-     .from('desabafos')
-     .insert({ mensagem: novoDesabafo, oracoes: 0, codigo_dono: meuCodigo })
+   .from('desabafos')
+   .insert({ mensagem: novoDesabafo, oracoes: 0, codigo_dono: meuCodigo })
 
     if (!error) {
       setNovoDesabafo('')
@@ -251,9 +251,9 @@ const fazerLogoutRefugio = () => {
     if (!pastorLogado) return
     if (confirm('Tem certeza que deseja apagar este desabafo? Esta ação não pode ser desfeita.')) {
       const { error } = await supabase
-       .from('desabafos')
-       .delete()
-       .eq('id', id)
+     .from('desabafos')
+     .delete()
+     .eq('id', id)
 
       if (!error) {
         setDesabafos(desabafos.filter(d => d.id!== id))
@@ -284,10 +284,10 @@ const fazerLogoutRefugio = () => {
   const enviarMensagemPastor = async () => {
   if (textoMensagemPastor.trim().length < 10) return
   const novoCodigo = gerarCodigo()
-  
+
   const { error } = await supabase
-    .from('mensagens_pastor')
-    .insert({
+  .from('mensagens_pastor')
+  .insert({
       texto: textoMensagemPastor,
       codigo: novoCodigo,
       nome_remetente: nomeBiblico || 'Anônimo'
@@ -304,9 +304,9 @@ const fazerLogoutRefugio = () => {
   }
   const carregarMensagensPastor = async () => {
   const { data } = await supabase
-    .from('mensagens_pastor')
-    .select('*')
-    .order('data', { ascending: false })
+  .from('mensagens_pastor')
+  .select('*')
+  .order('data', { ascending: false })
 
   if (data) {
     const msgs: MensagemPastor[] = data.map(d => ({
@@ -316,39 +316,39 @@ const fazerLogoutRefugio = () => {
       lida: d.lida,
       codigo: d.codigo,
       resposta: d.resposta,
-      dataResposta: d.data_resposta ? new Date(d.data_resposta).toLocaleString('pt-BR') : undefined
+      dataResposta: d.data_resposta? new Date(d.data_resposta).toLocaleString('pt-BR') : undefined
     }))
     setMensagensPastor(msgs)
   }
 }
 const enviarRespostaPastor = async (id: string, resposta: string) => {
   if (resposta.trim().length < 5) return
-  
+
   const { error } = await supabase
-    .from('mensagens_pastor')
-    .update({ 
-      resposta: resposta, 
+  .from('mensagens_pastor')
+  .update({
+      resposta: resposta,
       data_resposta: new Date().toISOString(),
-      lida: true 
+      lida: true
     })
-    .eq('id', id)
+  .eq('id', id)
 
   if (!error) {
-    carregarMensagensPastor() // Recarrega pra mostrar a resposta
+    carregarMensagensPastor()
   } else {
     alert('Erro ao enviar resposta')
   }
 }
   const buscarResposta = async () => {
   const codigo = codigoAcompanhamento.trim().toUpperCase()
-  
-  const { data, error } = await supabase
-    .from('mensagens_pastor')
-    .select('*')
-    .eq('codigo', codigo)
-    .maybeSingle()
 
-  if (error || !data) {
+  const { data, error } = await supabase
+  .from('mensagens_pastor')
+  .select('*')
+  .eq('codigo', codigo)
+  .maybeSingle()
+
+  if (error ||!data) {
     alert('Código não encontrado. Verifique e tente novamente.')
     return
   }
@@ -360,7 +360,7 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
     lida: data.lida,
     codigo: data.codigo,
     resposta: data.resposta,
-    dataResposta: data.data_resposta ? new Date(data.data_resposta).toLocaleString('pt-BR') : undefined
+    dataResposta: data.data_resposta? new Date(data.data_resposta).toLocaleString('pt-BR') : undefined
   })
   setTelaPastor('verResposta')
   }
@@ -505,7 +505,7 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
                             disabled={jaVotou}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
                               jaVotou
-                               ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                             ? 'bg-green-100 text-green-700 cursor-not-allowed'
                                 : 'bg-calm-500 text-white hover:bg-calm-600'
                             }`}
                           >
@@ -539,8 +539,7 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
   <motion.div key="pastor" initial={{ opacity: 0, x: 100 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -100 }} className="min-h-screen flex items-center justify-center px-4 py-8">
     <div className="w-full max-w-2xl">
       <button onClick={() => { setTela('home'); setTelaPastor('login'); setMensagemEncontrada(null); setCodigoAcompanhamento('') }} className="mb-6 text-calm-600 hover:text-calm-700">← Voltar</button>
-      
-      {/* TELA 1: LOGIN DO PASTOR */}
+
       {!pastorLogado && telaPastor === 'login' && (
         <div className="bg-white p-8 rounded-2xl shadow-xl">
           <h2 className="text-3xl font-playfair text-calm-600 mb-2 text-center">Área do Pastor</h2>
@@ -551,7 +550,6 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
         </div>
       )}
 
-      {/* TELA 2: ENVIAR MENSAGEM PRIVADA PRO PASTOR */}
       {telaPastor === 'escrever' && (
         <div>
           <h2 className="text-3xl font-playfair text-calm-600 mb-2">Fale com o Pastor</h2>
@@ -567,7 +565,6 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
         </div>
       )}
 
-      {/* TELA 3: MOSTRA CÓDIGO DEPOIS DE ENVIAR */}
       {telaPastor === 'codigo' && (
         <div className="bg-white p-8 rounded-2xl shadow-xl text-center">
           <div className="text-5xl mb-4">✉️</div>
@@ -581,7 +578,6 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
         </div>
       )}
 
-      {/* TELA 4: VER RESPOSTA COM CÓDIGO */}
       {telaPastor === 'verResposta' && (
         <div>
           <h2 className="text-3xl font-playfair text-calm-600 mb-6 text-center">Ver Resposta do Pastor</h2>
@@ -611,7 +607,6 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
         </div>
       )}
 
-      {/* TELA 5: PASTOR VÊ MENSAGENS */}
       {pastorLogado && telaPastor === 'mensagens' && (
         <div>
           <div className="flex items-center justify-between mb-6">
@@ -651,7 +646,7 @@ const enviarRespostaPastor = async (id: string, resposta: string) => {
 )}
       </AnimatePresence>
 
-      {/* MODAL DE LOGIN - POPUP */}
+
       {mostrarModalLogin && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center px-4 z-50 overflow-y-auto py-8">
           <motion.div
